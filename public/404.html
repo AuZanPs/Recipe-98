@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recipe Discovery 98</title>
+    <script>
+      (function () {
+        // GitHub Pages project site; Cloudflare Pages uses the domain root.
+        var projectBase = '/Recipe-98/';
+        var BASE = window.location.pathname.indexOf(projectBase) === 0
+          ? projectBase
+          : '/';
+        var path = window.location.pathname;
+        if (path.indexOf(BASE) === 0) path = path.slice(BASE.length);
+        path = path.replace(/^\/+|\/+$/g, '');
+
+        // Drop the unknown path, then let the app translate ?redirect=app.
+        try {
+          window.history.replaceState(null, '', BASE + '?redirect=' + encodeURIComponent(path));
+        } catch (error) {
+          window.location.replace(BASE + '?redirect=' + encodeURIComponent(path));
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to Recipe Discovery 98...</p>
+  </body>
+</html>

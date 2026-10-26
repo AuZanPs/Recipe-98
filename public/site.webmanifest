@@ -1,0 +1,17 @@
+{
+  "name": "Recipe Discovery 98",
+  "short_name": "Recipe 98",
+  "description": "A Windows 98-styled recipe browser powered by TheMealDB.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#008080",
+  "theme_color": "#008080",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
