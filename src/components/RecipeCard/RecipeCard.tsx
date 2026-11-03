@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { handleRecipeImageError } from '../../utils/recipeImage';
+import { mealImageUrl, handleRecipeImageError } from '../../utils/recipeImage';
 import type { MealPartial } from '../../types/recipe';
 
 interface Props {
@@ -26,7 +26,7 @@ export const RecipeCard = memo(({ meal, onSelect }: Props) => {
       </div>
       <div className="window-body meal-card-body">
         <img
-          src={meal.strMealThumb}
+          src={mealImageUrl(meal.strMealThumb, 'preview')}
           alt=""
           className="meal-thumb"
           loading="lazy"

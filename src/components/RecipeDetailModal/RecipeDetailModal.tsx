@@ -5,7 +5,7 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import { processMeal } from '../../types/recipe';
 import type { MealPartial, ProcessedMeal } from '../../types/recipe';
 import { Bookmark, ExternalLink, Play, Printer } from 'pixelarticons/react';
-import { handleRecipeImageError } from '../../utils/recipeImage';
+import { handleRecipeImageError, mealImageUrl } from '../../utils/recipeImage';
 import { Loading } from '../States/Loading';
 
 interface Props {
@@ -149,7 +149,7 @@ const RecipeDetails = ({
       <h2 className="print-recipe-title">{meal.name}</h2>
       <div className="recipe-header">
         <img
-          src={meal.thumbnail}
+          src={mealImageUrl(meal.thumbnail, 'medium')}
           alt={meal.name}
           className="recipe-image"
           onError={handleRecipeImageError}
