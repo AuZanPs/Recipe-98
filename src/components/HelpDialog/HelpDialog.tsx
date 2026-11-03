@@ -15,9 +15,7 @@ export const HelpDialog = ({ open, onOpen, onClose }: Props) => {
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    if (dialog && open && !dialog.open) dialog.showModal();
   }, [open]);
 
   const handleBackdropClick = (event: MouseEvent<HTMLDialogElement>) => {
@@ -32,7 +30,7 @@ export const HelpDialog = ({ open, onOpen, onClose }: Props) => {
         title="Help"
         onClick={onOpen}
       />
-      {createPortal(
+      {open && createPortal(
         <dialog
           ref={dialogRef}
           className="help-dialog"

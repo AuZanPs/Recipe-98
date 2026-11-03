@@ -31,15 +31,10 @@ export const SettingsDialog = ({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open && !dialog.open) {
-      setDraft(settings);
-      setTab('appearance');
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    if (!dialog || !open || dialog.open) return;
+    setDraft(settings);
+    setTab('appearance');
+    dialog.showModal();
   }, [open, settings]);
 
   const update = (patch: Partial<DesktopSettings>) => {
@@ -60,6 +55,10 @@ export const SettingsDialog = ({
   const closeFromBackdrop = (event: MouseEvent<HTMLDialogElement>) => {
     if (event.target === event.currentTarget) close();
   };
+
+  // A closed dialog renders nothing, which also keeps the server markup and the
+  // first client render identical: there is no document to portal into server-side.
+  if (!open) return null;
 
   return createPortal(
     <dialog

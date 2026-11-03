@@ -24,9 +24,7 @@ export const CreditsDialog = ({ open, onClose }: Props) => {
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    else if (!open && dialog.open) dialog.close();
+    if (dialog && open && !dialog.open) dialog.showModal();
   }, [open]);
 
   const closeFromBackdrop = (event: MouseEvent<HTMLDialogElement>) => {
@@ -35,6 +33,10 @@ export const CreditsDialog = ({ open, onClose }: Props) => {
       onClose();
     }
   };
+
+  // A closed dialog renders nothing, which also keeps the server markup and the
+  // first client render identical: there is no document to portal into server-side.
+  if (!open) return null;
 
   return createPortal(
     <dialog
