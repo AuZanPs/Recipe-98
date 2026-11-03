@@ -55,6 +55,7 @@ describe('StartMenu', () => {
       onSetTheme: vi.fn(),
       onOpenHelp: vi.fn(),
       onCloseWindow: vi.fn(),
+      onShutDown: vi.fn(),
       ...overrides,
     };
     render(<StartMenu {...props} />);
@@ -105,6 +106,15 @@ describe('StartMenu', () => {
     expect(screen.queryByRole('menuitem', { name: 'Close Window' })).toBeNull();
   });
 
+  it('always offers Shut Down', async () => {
+    const user = userEvent.setup();
+    const props = setup({ canCloseWindow: false });
+
+    await user.click(screen.getByRole('menuitem', { name: /shut down/i }));
+
+    expect(props.onShutDown).toHaveBeenCalledTimes(1);
+  });
+
   it('moves focus with the arrow keys and wraps around', async () => {
     const user = userEvent.setup();
     setup();
@@ -113,7 +123,7 @@ describe('StartMenu', () => {
     expect(screen.getByRole('menuitem', { name: /settings/i })).toHaveFocus();
 
     await user.keyboard('{End}');
-    expect(screen.getByRole('menuitem', { name: 'Close Window' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: /shut down/i })).toHaveFocus();
 
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: /programs/i })).toHaveFocus();

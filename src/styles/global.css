@@ -46,6 +46,38 @@ body,
   height: 100%;
 }
 
+/* ---------- Platform ---------- */
+
+html,
+body {
+  /* No rubber-banding or pull-to-refresh under an app that owns the viewport. */
+  overscroll-behavior: none;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Controls answer on press, and a long press never selects the label. */
+button,
+a,
+select,
+[role='button'] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* iOS zooms the layout when a focused field is smaller than 16px. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 body {
   margin: 0;
   background: var(--win-bg);
@@ -74,6 +106,7 @@ body {
 /* ---------- App shell ---------- */
 
 .app-shell {
+  --shell-pad-bottom: 54px;
   position: relative;
   min-height: 100dvh;
   height: 100dvh;
@@ -81,7 +114,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 24px 54px;
+  padding:
+    24px
+    max(24px, env(safe-area-inset-right, 0px))
+    calc(var(--shell-pad-bottom) + env(safe-area-inset-bottom, 0px))
+    max(24px, env(safe-area-inset-left, 0px));
   background: var(--theme-desktop);
   background-image:
     linear-gradient(45deg, rgba(0, 0, 0, 0.04) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.04) 75%),
@@ -298,7 +335,7 @@ body {
   outline-offset: 1px;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .app-desktop-icon:hover img {
     background: rgba(0, 0, 128, 0.35);
     outline-color: var(--win-white);
@@ -321,7 +358,7 @@ body {
   gap: 8px;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .taskbar-credit:hover {
     text-decoration: underline;
   }
@@ -527,7 +564,7 @@ button.with-icon:disabled {
   outline-color: var(--win-navy);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .meal-card:hover,
   .category-card:hover {
     outline-color: var(--win-navy);
@@ -1102,8 +1139,8 @@ button.with-icon:disabled {
   display: flex;
   align-items: center;
   gap: 3px;
-  height: 30px;
-  padding: 2px 3px;
+  height: calc(30px + env(safe-area-inset-bottom, 0px));
+  padding: 2px 3px env(safe-area-inset-bottom, 0px);
   background: var(--win-bg);
   box-shadow: inset 0 1px var(--win-white), inset 0 2px var(--win-bg-light);
   font-family: var(--font-ui);
@@ -1378,7 +1415,7 @@ button.with-icon:disabled {
   border-bottom: 1px solid var(--win-white);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .start-menu-items button:hover {
     background: var(--win-navy);
     color: var(--win-white);
@@ -1412,7 +1449,12 @@ button.with-icon:disabled {
 
 @media (max-width: 768px) {
   .app-shell {
-    padding: 8px 8px 42px;
+    --shell-pad-bottom: 42px;
+    padding:
+      8px
+      max(8px, env(safe-area-inset-right, 0px))
+      calc(var(--shell-pad-bottom) + env(safe-area-inset-bottom, 0px))
+      max(8px, env(safe-area-inset-left, 0px));
   }
 
   .window.main-shell {
@@ -1544,11 +1586,15 @@ button.with-icon:disabled {
 }
 
 @media (max-width: 420px) {
+  /* The title bar already names the window; the taskbar keeps its icon only. */
+  .taskbar-window-label {
+    display: none;
+  }
+
   .recipe-image {
     width: 120px;
     height: 120px;
   }
-
   .ingredient-item {
     flex-direction: column;
     gap: 2px;
@@ -1575,6 +1621,11 @@ button.with-icon:disabled {
     background-position: center;
   }
 
+  /* Keyboard shortcuts are noise on a touch keyboard. */
+  .welcome-hint {
+    display: none;
+  }
+
   .start-button,
   .taskbar-window {
     min-height: 26px;
@@ -1590,6 +1641,28 @@ button.with-icon:disabled {
   .search-form input,
   .category-filter select {
     min-height: 26px;
+  }
+}
+
+/* Phones held sideways: keep the taskbar and window usable in a short viewport. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .app-shell {
+    --shell-pad-bottom: 38px;
+    padding-top: 6px;
+  }
+
+  .window.main-shell {
+    height: calc(100dvh - 44px);
+  }
+
+  .window.main-shell.welcome-mode {
+    max-height: calc(100dvh - 44px);
+    overflow-y: auto;
+  }
+
+  .welcome-content {
+    gap: 12px;
+    padding: 14px 16px;
   }
 }
 
@@ -1750,4 +1823,130 @@ button.with-icon:disabled {
     width: 150px;
     height: 150px;
   }
+}
+
+/* ---------- Link-based controls ---------- */
+
+/* 98.css styles the <button> element only. The launcher and the 404 page use
+   real links so each view keeps its own URL, so they carry this class. */
+.win-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 23px;
+  padding: 2px 12px;
+  color: var(--win-text);
+  background: var(--win-bg);
+  font: inherit;
+  text-decoration: none;
+  box-shadow:
+    inset -1px -1px #0a0a0a,
+    inset 1px 1px #fff,
+    inset -2px -2px #808080,
+    inset 2px 2px #dfdfdf;
+}
+
+.win-button:active {
+  box-shadow:
+    inset -2px 0 0 #808080,
+    inset 2px 2px #0a0a0a,
+    inset 0 -2px 0 #dfdfdf,
+    inset 0 2px 2px #fff;
+}
+
+.welcome-hint {
+  margin: 0;
+  color: var(--win-muted);
+  font-family: var(--font-copy);
+}
+
+.welcome-hint kbd {
+  padding: 0 3px;
+  background: var(--win-bg-light);
+  border: 1px solid #808080;
+  font-family: var(--font-ascii);
+}
+
+.starting-hint {
+  margin: 0;
+  padding: 28px;
+  color: var(--win-muted);
+  font-family: var(--font-copy);
+}
+
+/* ---------- Shut Down ---------- */
+
+.app-shell.shutting-down {
+  display: grid;
+  place-content: center;
+  gap: 32px;
+  background: #000;
+  color: #ffb000;
+  text-align: center;
+}
+
+.shutdown-message {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.shutdown-restart {
+  justify-self: center;
+  min-width: 120px;
+}
+
+/* ---------- Blue screen ---------- */
+
+.app-shell.bsod {
+  overflow: auto;
+  padding: 12vh 8vw;
+  background: #0000aa;
+  color: #fff;
+  font-family: var(--font-copy);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.bsod p {
+  max-width: 70ch;
+  margin: 0 0 1em;
+}
+
+.bsod-banner {
+  display: inline-block;
+  padding: 0 8px;
+  background: var(--win-bg);
+  color: #0000aa;
+  font-family: var(--font-ui);
+}
+
+.bsod-detail {
+  max-width: 70ch;
+  padding: 8px 12px;
+  background: #000080;
+}
+
+.bsod-list {
+  max-width: 70ch;
+  margin: 0 0 1.5em;
+  padding-left: 1.4em;
+}
+
+.bsod-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bsod-trace {
+  max-width: 70ch;
+  margin-bottom: 1.5em;
+}
+
+.bsod-trace pre {
+  max-height: 30vh;
+  padding: 8px;
+  overflow: auto;
+  background: #000080;
 }

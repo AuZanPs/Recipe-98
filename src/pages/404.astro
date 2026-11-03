@@ -1,0 +1,28 @@
+---
+import { getAssetUrl } from '../routing';
+import Layout from '../layouts/Layout.astro';
+
+const home = import.meta.env.BASE_URL;
+---
+
+<Layout title="Recipe Discovery 98 - Not Found">
+  <main class="app-shell">
+    <section class="window main-shell" aria-label="Page not found">
+      <div class="title-bar">
+        <img class="title-bar-icon" src={getAssetUrl('favicon.svg')} alt="" width="16" height="16" />
+        <div class="title-bar-text">Recipe Discovery 98</div>
+      </div>
+      <div class="window-body error-boundary">
+        <h1>Cannot find this page</h1>
+        <p>The address you typed is not part of this desktop.</p>
+        <div class="sunken-panel error-details">
+          Error 404: the requested view does not exist.
+        </div>
+        <div class="button-row">
+          <a class="win-button" href={home} data-astro-prefetch>Back to Desktop</a>
+          <a class="win-button" href={`${home}app/`} data-astro-prefetch>Open Recipe Finder</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>

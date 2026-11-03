@@ -5,7 +5,7 @@ import type {
   ReactNode,
   RefObject,
 } from 'react';
-import { Close, Computer, Folder, InfoBox, Settings2 } from 'pixelarticons/react';
+import { Close, Computer, Folder, InfoBox, Power, Settings2 } from 'pixelarticons/react';
 
 type SubmenuName = 'programs' | 'settings';
 
@@ -20,6 +20,7 @@ interface Props {
   onSetTheme: (plum: boolean) => void;
   onOpenHelp: () => void;
   onCloseWindow: () => void;
+  onShutDown: () => void;
 }
 
 const iconProps = { width: 16, height: 16, 'aria-hidden': true } as const;
@@ -45,6 +46,7 @@ export const StartMenu = ({
   onSetTheme,
   onOpenHelp,
   onCloseWindow,
+  onShutDown,
 }: Props) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [submenu, setSubmenu] = useState<SubmenuName | null>(null);
@@ -248,6 +250,14 @@ export const StartMenu = ({
             Close Window
           </MenuItem>
         )}
+        <MenuItem
+          className="with-icon"
+          onMouseEnter={() => setSubmenu(null)}
+          onClick={onShutDown}
+        >
+          <Power {...iconProps} />
+          Shut Down...
+        </MenuItem>
       </div>
     </div>
   );

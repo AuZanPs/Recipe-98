@@ -29,28 +29,26 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <div className="app-shell">
-        <div className="window main-shell">
-          <div className="title-bar">
-            <div className="title-bar-text">Recipe Discovery - System Error</div>
-          </div>
-          <div className="window-body error-boundary">
-            <h1>Application Error</h1>
-            <p>The recipe finder hit an unexpected problem.</p>
-            <div className="sunken-panel error-details" role="alert">
-              {error.message || 'Unknown error.'}
-            </div>
-            {import.meta.env.DEV && error.stack && (
-              <details>
-                <summary>Stack trace</summary>
-                <pre>{error.stack}</pre>
-              </details>
-            )}
-            <div className="button-row">
-              <button type="button" onClick={this.handleRetry}>Try Again</button>
-              <button type="button" onClick={() => window.location.reload()}>Reload Page</button>
-            </div>
-          </div>
+      <div className="app-shell bsod" role="alert">
+        <p className="bsod-banner">Recipe Discovery 98</p>
+        <p>
+          A fatal exception 0E has occurred in the recipe finder. The current
+          application will be terminated.
+        </p>
+        <p className="bsod-detail">{error.message || 'Unknown error.'}</p>
+        <ul className="bsod-list">
+          <li>Press Try Again to restart the recipe finder.</li>
+          <li>Press Reload Page to restart the whole desktop.</li>
+        </ul>
+        {import.meta.env.DEV && error.stack && (
+          <details className="bsod-trace">
+            <summary>Stack trace</summary>
+            <pre>{error.stack}</pre>
+          </details>
+        )}
+        <div className="bsod-actions">
+          <button type="button" onClick={this.handleRetry}>Try Again</button>
+          <button type="button" onClick={() => window.location.reload()}>Reload Page</button>
         </div>
       </div>
     );
