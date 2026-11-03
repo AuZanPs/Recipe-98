@@ -35,6 +35,8 @@ function parseSaved(raw: string | null): MealPartial[] {
 
 function getSnapshot(): MealPartial[] {
   if (cache) return cache;
+  // Server render: there is no storage, and nothing to remember.
+  if (typeof window === 'undefined') return [];
   try {
     cache = parseSaved(window.localStorage.getItem(STORAGE_KEY));
   } catch (error) {
