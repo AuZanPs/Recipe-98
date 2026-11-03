@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { background, swell } from 'asciify-engine/kit';
-import { Close, Computer, Folder, InfoBox, Settings2 } from 'pixelarticons/react';
-import { getRandomMeal } from '../api';
+import type { BackgroundHandle } from 'asciify-engine/kit';
 import { CreditsDialog } from '../components/CreditsDialog/CreditsDialog';
 import { HelpDialog } from '../components/HelpDialog/HelpDialog';
+import { LaunchDialog } from '../components/LaunchDialog/LaunchDialog';
 import { SettingsDialog } from '../components/SettingsDialog/SettingsDialog';
-import { defaultSettings } from '../components/SettingsDialog/settings';
+import { loadSettings, saveSettings } from '../components/SettingsDialog/settings';
 import type { DesktopSettings } from '../components/SettingsDialog/settings';
+import { StartMenu } from '../components/StartMenu/StartMenu';
 import { WindowFrame } from '../components/WindowFrame/WindowFrame';
 import { useDraggableWindow } from '../hooks/useDraggableWindow';
-import { getAppUrl, getAssetUrl, getBaseUrl } from '../routing';
-import type { MealPartial } from '../types/recipe';
-import { handleRecipeImageError } from '../utils/recipeImage';
+import { useKonamiCode } from '../hooks/useKonamiCode';
+import { getAppUrl, getAssetUrl } from '../routing';
+import { prefersReducedMotion } from '../utils/motion';
 import { Home } from './Home';
 
 type WindowState = 'open' | 'minimized' | 'closed';
@@ -21,28 +21,17 @@ interface Props {
   initialAppOpen: boolean;
 }
 
+/** How long the Recipe Finder "starts up" before its window appears. */
+const LAUNCH_DURATION_MS = 900;
+
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: 'numeric',
   minute: '2-digit',
 });
 
-const konamiCode = [
-  'ArrowUp',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowLeft',
-  'ArrowRight',
-  'b',
-  'a',
-];
-
 export const Desktop = ({ initialAppOpen }: Props) => {
   const desktopRef = useRef<HTMLElement>(null);
   const startButtonRef = useRef<HTMLButtonElement>(null);
-  const startMenuRef = useRef<HTMLDivElement>(null);
   const taskbarButtonRef = useRef<HTMLButtonElement>(null);
   const desktopIconRef = useRef<HTMLButtonElement>(null);
 
@@ -50,13 +39,15 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   const [windowState, setWindowState] = useState<WindowState>('open');
   const [maximized, setMaximized] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
-  const [submenu, setSubmenu] = useState<'programs' | 'settings' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
-  const [settings, setSettings] = useState<DesktopSettings>(defaultSettings);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [settings, setSettings] = useState<DesktopSettings>(loadSettings);
   const plum = settings.theme === 'plum';
   const [now, setNow] = useState(() => new Date());
-  const [special, setSpecial] = useState<MealPartial | null>(null);
+  const [launching, setLaunching] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const launchTimerRef = useRef<number | undefined>(undefined);
 
   const {
     windowRef,
@@ -68,12 +59,14 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     enabled: windowState === 'open' && !maximized,
   });
 
-  const {
-    windowRef: specialRef,
-    style: specialStyle,
-    dragging: specialDragging,
-    titleBarProps: specialTitleBarProps,
-  } = useDraggableWindow<HTMLDivElement>({ keepVisible: 32 });
+  useKonamiCode(
+    useCallback(() => {
+      setSettings((current) => ({
+        ...current,
+        theme: current.theme === 'plum' ? 'standard' : 'plum',
+      }));
+    }, []),
+  );
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -83,135 +76,111 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   }, [settings.textSize]);
 
   useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
+
+  // The theme is a root attribute so portaled dialogs are themed too.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = settings.theme;
+    const desktopColour = getComputedStyle(root).getPropertyValue('--theme-desktop').trim();
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', desktopColour);
+  }, [settings.theme]);
+
+  useEffect(() => {
     const host = desktopRef.current;
     if (!host) return;
 
-    const field = background(host, {
-      preset: swell,
-      clear: windowRef.current ?? false,
-      clearPadding: 28,
-      clearSoftness: 64,
-      cursor: true,
-      opacity: 0.4,
-      speed: 0.55,
-      cellSize: 12,
-      mark: 'glyph',
-      charset: ' .:-=+*#',
-      ink: '--ascii-ink-landing',
-      lazy: false,
-      globalLook: false,
-      look: { font: '"IBM Plex Mono", monospace' },
-    });
+    // The ASCII field is decorative: if it fails to start, the desktop should
+    // keep working without it.
+    let field: BackgroundHandle | null = null;
+    try {
+      field = background(host, {
+        preset: swell,
+        clear: windowRef.current ?? false,
+        clearPadding: 28,
+        clearSoftness: 64,
+        cursor: true,
+        opacity: 0.4,
+        speed: 0.55,
+        cellSize: 12,
+        mark: 'glyph',
+        charset: ' .:-=+*#',
+        ink: '--ascii-ink-landing',
+        lazy: false,
+        globalLook: false,
+        look: { font: '"IBM Plex Mono", monospace' },
+      });
+    } catch (error) {
+      console.warn('The ASCII desktop background could not start.', error);
+    }
 
-    return () => field.destroy();
-  }, [windowRef]);
+    return () => field?.destroy();
+    // Restarted on theme change so the field picks up the new desktop colour.
+  }, [windowRef, settings.theme]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const dismissStartMenu = useCallback(() => setStartOpen(false), []);
 
-    getRandomMeal(controller.signal)
-      .then((meal) => {
-        if (!controller.signal.aborted) setSpecial(meal);
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          console.warn('Today’s Special could not be loaded.', error);
-        }
-      });
+  useEffect(() => () => window.clearTimeout(launchTimerRef.current), []);
 
-    return () => controller.abort();
-  }, []);
+  const focusDesktop = () => {
+    const target = settings.showDesktopIcon
+      ? desktopIconRef.current
+      : startButtonRef.current;
+    target?.focus();
+  };
 
-  useEffect(() => {
-    let index = 0;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-      if (key === konamiCode[index]) {
-        index += 1;
-        if (index === konamiCode.length) {
-          setSettings((current) => ({
-            ...current,
-            theme: current.theme === 'plum' ? 'standard' : 'plum',
-          }));
-          index = 0;
-        }
-      } else {
-        index = key === konamiCode[0] ? 1 : 0;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (!startOpen) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (startMenuRef.current?.contains(target)) return;
-      if (startButtonRef.current?.contains(target)) return;
-      setStartOpen(false);
-      setSubmenu(null);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (submenu) {
-        setSubmenu(null);
-        return;
-      }
-      setStartOpen(false);
-      startButtonRef.current?.focus();
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [startOpen, submenu]);
-
-  useEffect(() => {
-    if (!startOpen) return;
-    startMenuRef.current
-      ?.querySelector<HTMLButtonElement>('[data-submenu-button]')
-      ?.focus();
-  }, [startOpen]);
-
-  const openApp = useCallback(() => {
+  const showApp = useCallback(() => {
     setAppOpen(true);
     setWindowState('open');
     setMaximized(false);
     setStartOpen(false);
-    setSubmenu(null);
+    setOpening(true);
     resetPosition();
     window.history.replaceState(null, '', getAppUrl());
     window.requestAnimationFrame(() => windowRef.current?.focus());
   }, [resetPosition, windowRef]);
 
-  const showWelcome = useCallback(() => {
-    setAppOpen(false);
-    setWindowState('open');
-    setMaximized(false);
+  // The welcome window is a launcher: starting the program closes it, then the
+  // program's own window opens after a short startup animation. Re-opening an
+  // already-running program just brings it back to the front.
+  const openApp = useCallback(() => {
+    if (launching) {
+      setStartOpen(false);
+      return;
+    }
+
+    if (appOpen && windowState !== 'closed') {
+      showApp();
+      return;
+    }
+
     setStartOpen(false);
-    setSubmenu(null);
-    resetPosition();
-    window.history.replaceState(null, '', getBaseUrl());
-    window.requestAnimationFrame(() => windowRef.current?.focus());
-  }, [resetPosition, windowRef]);
+    setWindowState('closed');
+
+    if (prefersReducedMotion()) {
+      showApp();
+      return;
+    }
+
+    setLaunching(true);
+    launchTimerRef.current = window.setTimeout(() => {
+      setLaunching(false);
+      showApp();
+    }, LAUNCH_DURATION_MS);
+  }, [appOpen, launching, showApp, windowState]);
 
   const restoreWindow = () => {
     setWindowState('open');
     setStartOpen(false);
+    setOpening(true);
     window.requestAnimationFrame(() => windowRef.current?.focus());
   };
 
@@ -225,9 +194,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     setWindowState('closed');
     setMaximized(false);
     setStartOpen(false);
-    setSubmenu(null);
-    setSettings((current) => ({ ...current, showSpecial: false }));
-    window.requestAnimationFrame(() => desktopIconRef.current?.focus());
+    window.requestAnimationFrame(focusDesktop);
   };
 
   const toggleMaximize = () => {
@@ -238,96 +205,27 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   };
 
   const openDesktopIcon = () => {
-    if (!appOpen) {
-      openApp();
+    if (appOpen && windowState !== 'closed') {
+      restoreWindow();
       return;
     }
-    restoreWindow();
+    openApp();
   };
 
   const openHelpFromMenu = () => {
     setStartOpen(false);
-    setSubmenu(null);
     if (windowState !== 'open') setWindowState('open');
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        windowRef.current
-          ?.querySelector<HTMLButtonElement>('button[aria-label="Help"]')
-          ?.click();
-      });
-    });
+    setHelpOpen(true);
   };
 
   const setTheme = (enabled: boolean) => {
     setSettings((current) => ({ ...current, theme: enabled ? 'plum' : 'standard' }));
     setStartOpen(false);
-    setSubmenu(null);
   };
 
   const openSettings = () => {
     setStartOpen(false);
-    setSubmenu(null);
     setSettingsOpen(true);
-  };
-
-  const openSubmenu = (name: 'programs' | 'settings') => {
-    setSubmenu(name);
-    window.requestAnimationFrame(() => {
-      startMenuRef.current
-        ?.querySelector<HTMLButtonElement>(`[data-submenu="${name}"] button`)
-        ?.focus();
-    });
-  };
-
-  const handleSubmenuKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>,
-    name: 'programs' | 'settings',
-  ) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      event.stopPropagation();
-      const buttons = [
-        ...(event.currentTarget.querySelectorAll<HTMLButtonElement>('button') ?? []),
-      ];
-      const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
-      const offset = event.key === 'ArrowDown' ? 1 : -1;
-      buttons[(current + offset + buttons.length) % buttons.length]?.focus();
-      return;
-    }
-
-    if (event.key === 'ArrowLeft' || event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      setSubmenu(null);
-      startMenuRef.current
-        ?.querySelector<HTMLButtonElement>(`[data-submenu-button="${name}"]`)
-        ?.focus();
-    }
-  };
-
-  const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Tab') {
-      setStartOpen(false);
-      return;
-    }
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-
-    const items = [
-      ...(startMenuRef.current?.querySelectorAll<HTMLButtonElement>(
-        '.start-menu-items > button, .start-menu-items > .start-menu-group > button',
-      ) ?? []),
-    ];
-    if (items.length === 0) return;
-
-    const current = items.indexOf(document.activeElement as HTMLButtonElement);
-    let next: number;
-    if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = items.length - 1;
-    else if (event.key === 'ArrowDown') next = (current + 1) % items.length;
-    else next = (current - 1 + items.length) % items.length;
-
-    event.preventDefault();
-    items[next]?.focus();
   };
 
   const windowClassName = [
@@ -335,12 +233,14 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     appOpen ? 'app-mode' : 'welcome-mode',
     maximized ? 'maximized' : '',
     dragging ? 'dragging' : '',
+    opening ? 'opening' : '',
   ].filter(Boolean).join(' ');
 
   return (
     <main
-      className={`app-shell${plum ? ' plum' : ''}`}
+      className={`app-shell${launching ? ' launching' : ''}`}
       ref={desktopRef}
+      aria-busy={launching}
     >
       {settings.showDesktopIcon && (
         <button
@@ -370,9 +270,16 @@ export const Desktop = ({ initialAppOpen }: Props) => {
         }}
         icon={getAssetUrl('favicon.svg')}
         hidden={windowState !== 'open'}
+        onAnimationEnd={(event) => {
+          if (event.target === event.currentTarget) setOpening(false);
+        }}
         controls={(
           <>
-            <HelpDialog />
+            <HelpDialog
+              open={helpOpen}
+              onOpen={() => setHelpOpen(true)}
+              onClose={() => setHelpOpen(false)}
+            />
             <button
               type="button"
               aria-label="Minimize"
@@ -414,208 +321,28 @@ export const Desktop = ({ initialAppOpen }: Props) => {
         )}
       </WindowFrame>
 
-      {special && settings.showSpecial && (
-        <aside
-          ref={specialRef}
-          className={`window today-window${specialDragging ? ' dragging' : ''}`}
-          style={specialStyle}
-          hidden={appOpen && windowState === 'open'}
-          aria-label="Today's Special recipe"
-        >
-          <div className="title-bar" {...specialTitleBarProps}>
-            <div className="title-bar-text">Today&apos;s Special</div>
-            <div className="title-bar-controls">
-              <button
-                type="button"
-                aria-label="Close"
-                title="Close Today's Special"
-                onClick={() => setSettings((current) => ({ ...current, showSpecial: false }))}
-              />
-            </div>
-          </div>
-          <div className="window-body today-body">
-            <img
-              src={special.strMealThumb}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              onError={handleRecipeImageError}
-            />
-            <p className="today-name" title={special.strMeal} dir="auto">
-              {special.strMeal}
-            </p>
-            <p className="today-meta" dir="auto">
-              {special.strCategory || 'Recipe'} · {special.strArea || 'Global'}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="today-hitarea"
-            onClick={openApp}
-            aria-label={`Open Recipe Finder with ${special.strMeal}`}
-          />
-        </aside>
+      {launching && (
+        <LaunchDialog
+          title="Recipe Finder"
+          message="Starting Recipe Finder..."
+          icon={getAssetUrl('favicon.svg')}
+          durationMs={LAUNCH_DURATION_MS}
+        />
       )}
 
       <footer className="taskbar">
         {startOpen && (
-          <div
-            ref={startMenuRef}
-            className="window start-menu"
-            role="menu"
-            aria-label="Start menu"
-            onKeyDown={handleMenuKeyDown}
-          >
-            <div className="start-menu-banner" aria-hidden="true">Windows 98</div>
-            <div className="start-menu-items">
-              <div className="start-menu-group">
-                <button
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="with-icon"
-                  data-submenu-button="programs"
-                  aria-haspopup="menu"
-                  aria-expanded={submenu === 'programs'}
-                  onMouseEnter={() => setSubmenu('programs')}
-                  onClick={() => openSubmenu('programs')}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'ArrowRight') return;
-                    event.preventDefault();
-                    openSubmenu('programs');
-                  }}
-                >
-                  <Folder width={16} height={16} aria-hidden="true" />
-                  Programs
-                  <span className="start-arrow" aria-hidden="true">▸</span>
-                </button>
-                {submenu === 'programs' && (
-                  <div
-                    className="window start-submenu"
-                    role="menu"
-                    aria-label="Programs"
-                    data-submenu="programs"
-                    onKeyDown={(event) => handleSubmenuKeyDown(event, 'programs')}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      tabIndex={-1}
-                      className="with-icon"
-                      onClick={openApp}
-                    >
-                      <Computer width={16} height={16} aria-hidden="true" />
-                      Recipe Finder
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      tabIndex={-1}
-                      className="with-icon"
-                      onClick={showWelcome}
-                    >
-                      Welcome Window
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="start-menu-group">
-                <button
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="with-icon"
-                  data-submenu-button="settings"
-                  aria-haspopup="menu"
-                  aria-expanded={submenu === 'settings'}
-                  onMouseEnter={() => setSubmenu('settings')}
-                  onClick={() => openSubmenu('settings')}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'ArrowRight') return;
-                    event.preventDefault();
-                    openSubmenu('settings');
-                  }}
-                >
-                  <Settings2 width={16} height={16} aria-hidden="true" />
-                  Settings
-                  <span className="start-arrow" aria-hidden="true">▸</span>
-                </button>
-                {submenu === 'settings' && (
-                  <div
-                    className="window start-submenu"
-                    role="menu"
-                    aria-label="Settings"
-                    data-submenu="settings"
-                    onKeyDown={(event) => handleSubmenuKeyDown(event, 'settings')}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      tabIndex={-1}
-                      className="with-icon"
-                      onClick={openSettings}
-                    >
-                      <Settings2 width={16} height={16} aria-hidden="true" />
-                      Display Properties...
-                    </button>
-                    <hr />
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={!plum}
-                      tabIndex={-1}
-                      onClick={() => setTheme(false)}
-                    >
-                      <span className="start-check" aria-hidden="true">
-                        {plum ? '' : '✓'}
-                      </span>
-                      Standard
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={plum}
-                      tabIndex={-1}
-                      onClick={() => setTheme(true)}
-                    >
-                      <span className="start-check" aria-hidden="true">
-                        {plum ? '✓' : ''}
-                      </span>
-                      Plum
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <hr />
-
-              <button
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className="with-icon"
-                onMouseEnter={() => setSubmenu(null)}
-                onClick={openHelpFromMenu}
-              >
-                <InfoBox width={16} height={16} aria-hidden="true" />
-                Help
-              </button>
-              {windowState !== 'closed' && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="with-icon"
-                  onMouseEnter={() => setSubmenu(null)}
-                  onClick={closeWindow}
-                >
-                  <Close width={16} height={16} aria-hidden="true" />
-                  Close Window
-                </button>
-              )}
-            </div>
-          </div>
+          <StartMenu
+            startButtonRef={startButtonRef}
+            plum={plum}
+            canCloseWindow={windowState !== 'closed'}
+            onDismiss={dismissStartMenu}
+            onOpenApp={openApp}
+            onOpenSettings={openSettings}
+            onSetTheme={setTheme}
+            onOpenHelp={openHelpFromMenu}
+            onCloseWindow={closeWindow}
+          />
         )}
 
         <button

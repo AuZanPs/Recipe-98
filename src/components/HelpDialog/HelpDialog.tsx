@@ -1,11 +1,24 @@
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
-export const HelpDialog = () => {
+interface Props {
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}
+
+export const HelpDialog = ({ open, onOpen, onClose }: Props) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const contentId = useId();
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    else if (!open && dialog.open) dialog.close();
+  }, [open]);
 
   const handleBackdropClick = (event: MouseEvent<HTMLDialogElement>) => {
     if (event.target === event.currentTarget) dialogRef.current?.close();
@@ -17,7 +30,7 @@ export const HelpDialog = () => {
         type="button"
         aria-label="Help"
         title="Help"
-        onClick={() => dialogRef.current?.showModal()}
+        onClick={onOpen}
       />
       {createPortal(
         <dialog
@@ -26,6 +39,7 @@ export const HelpDialog = () => {
           aria-labelledby={titleId}
           aria-describedby={contentId}
           onClick={handleBackdropClick}
+          onClose={onClose}
         >
           <div className="window">
             <div className="title-bar">
@@ -38,7 +52,7 @@ export const HelpDialog = () => {
             </div>
             <div className="window-body help-content" id={contentId}>
               <p><strong>Recipe Discovery 98</strong></p>
-              <p>A Windows 98–styled recipe finder backed by TheMealDB.</p>
+              <p>A retro 98-styled recipe finder backed by TheMealDB.</p>
               <hr />
               <ul>
                 <li>Search by recipe name (at least two characters).</li>

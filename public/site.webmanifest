@@ -1,7 +1,7 @@
 {
   "name": "Recipe Discovery 98",
   "short_name": "Recipe 98",
-  "description": "A Windows 98-styled recipe browser powered by TheMealDB.",
+  "description": "A retro 98-styled recipe browser powered by TheMealDB.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

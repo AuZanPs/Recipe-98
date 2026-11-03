@@ -107,7 +107,7 @@ export const SettingsDialog = ({
                         checked={draft.theme === 'standard'}
                         onChange={() => update({ theme: 'standard' })}
                       />
-                      <label htmlFor="theme-standard">Windows 98 Standard</label>
+                      <label htmlFor="theme-standard">Recipe 98 Standard</label>
                     </div>
                     <div className="field-row">
                       <input
@@ -154,15 +154,6 @@ export const SettingsDialog = ({
                     <legend>Desktop items</legend>
                     <div className="field-row">
                       <input
-                        id="show-special"
-                        type="checkbox"
-                        checked={draft.showSpecial}
-                        onChange={(event) => update({ showSpecial: event.target.checked })}
-                      />
-                      <label htmlFor="show-special">Show Today&apos;s Special</label>
-                    </div>
-                    <div className="field-row">
-                      <input
                         id="show-clock"
                         type="checkbox"
                         checked={draft.showClock}
@@ -187,7 +178,6 @@ export const SettingsDialog = ({
                         Desktop
                         <ul>
                           <li>Recipe Finder</li>
-                          <li>Today&apos;s Special {draft.showSpecial ? '' : '(hidden)'}</li>
                           <li>Taskbar {draft.showClock ? '' : '(clock hidden)'}</li>
                         </ul>
                       </li>

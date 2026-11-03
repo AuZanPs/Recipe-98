@@ -1,4 +1,5 @@
 import type {
+  AnimationEventHandler,
   CSSProperties,
   HTMLAttributes,
   ReactNode,
@@ -15,6 +16,7 @@ interface Props {
   titleBarProps?: HTMLAttributes<HTMLDivElement>;
   icon?: string;
   hidden?: boolean;
+  onAnimationEnd?: AnimationEventHandler<HTMLElement>;
 }
 
 export const WindowFrame = ({
@@ -27,12 +29,14 @@ export const WindowFrame = ({
   titleBarProps,
   icon,
   hidden,
+  onAnimationEnd,
 }: Props) => (
   <section
     ref={windowRef}
     className={`window ${className ?? ''}`.trim()}
     style={style}
     hidden={hidden}
+    onAnimationEnd={onAnimationEnd}
     tabIndex={-1}
     aria-label={title}
   >

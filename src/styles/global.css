@@ -8,15 +8,32 @@
   --win-text: #000;
   --win-muted: #5a5a5a;
   --win-white: #fff;
+  --theme-desktop: var(--win-teal);
+  --theme-titlebar: linear-gradient(90deg, var(--win-navy), #1084d0);
+  --theme-selection: var(--win-navy);
   --font-ui: 'Pixelated MS Sans Serif', 'MS Sans Serif', Arial, sans-serif;
   --font-copy: 'IBM Plex Sans', Arial, sans-serif;
   --font-ascii: 'IBM Plex Mono', 'Courier New', monospace;
   --ascii-ink-strong: #000;
   --ascii-ink: #4f4f4f;
-  --ascii-ink-landing: color-mix(in oklab, var(--win-teal) 46%, var(--win-white));
+  --ascii-ink-landing: color-mix(in oklab, var(--theme-desktop) 46%, var(--win-white));
   --ascii-success: #006600;
   --ascii-warning: #8a5a00;
   --ascii-error: #a80000;
+}
+
+/* Plum recolours every surface that follows the desktop accent: title bars
+   (including portaled dialogs), active controls, selection and links. */
+:root[data-theme='plum'] {
+  --win-navy: #6b2f6b;
+  --theme-desktop: #5c2a5c;
+  --theme-titlebar: linear-gradient(90deg, #3a1745, #8d4e8d);
+  --theme-selection: #7a3a7a;
+}
+
+::selection {
+  color: var(--win-white);
+  background: var(--theme-selection);
 }
 
 * {
@@ -65,7 +82,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px 24px 54px;
-  background: var(--win-teal);
+  background: var(--theme-desktop);
   background-image:
     linear-gradient(45deg, rgba(0, 0, 0, 0.04) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.04) 75%),
     linear-gradient(45deg, rgba(0, 0, 0, 0.04) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.04) 75%);
@@ -133,6 +150,88 @@ body {
 
 .window.main-shell:focus {
   outline: none;
+}
+
+@keyframes window-open {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.window.main-shell.opening:not([hidden]) {
+  animation: window-open 180ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* ---------- Program launch ---------- */
+
+.launch-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 100;
+  width: min(320px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  animation: launch-dialog-in 160ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes launch-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.launch-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.launch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.launch-row p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-copy);
+  font-size: 12px;
+}
+
+.launch-icon {
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+.launch-progress {
+  margin: 0;
+}
+
+.launch-progress .progress-indicator-bar {
+  width: 0;
+  animation: launch-progress var(--launch-duration, 900ms) linear forwards;
+}
+
+@keyframes launch-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.app-shell.launching,
+.app-shell.launching * {
+  cursor: progress !important;
 }
 
 .window.main-shell.maximized {
@@ -206,97 +305,6 @@ body {
   }
 }
 
-.today-window {
-  position: absolute;
-  right: 40px;
-  bottom: 70px;
-  z-index: 1;
-  width: 240px;
-  transform: translate3d(var(--drag-x, 0px), var(--drag-y, 0px), 0);
-  transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.today-window[hidden] {
-  display: none;
-}
-
-.today-window.dragging {
-  transition: none;
-}
-
-.today-window .title-bar {
-  cursor: move;
-  touch-action: none;
-  user-select: none;
-}
-
-.today-window .title-bar-controls button {
-  cursor: pointer;
-}
-
-.today-body {
-  margin: 6px;
-  padding: 0;
-  overflow: hidden;
-}
-
-.today-body img {
-  display: block;
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  background-color: var(--win-bg-light);
-  background-image: var(--recipe-placeholder);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  outline: 1px solid oklch(0 0 0 / 0.1);
-  outline-offset: -1px;
-}
-
-.today-name {
-  margin: 8px 8px 2px;
-  overflow: hidden;
-  font-weight: 700;
-  font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.today-meta {
-  margin: 0 8px 8px;
-  overflow-wrap: anywhere;
-  color: var(--win-muted);
-  font-family: var(--font-copy);
-  font-size: 11px;
-}
-
-.today-hitarea {
-  position: absolute;
-  inset: 30px 0 0;
-  z-index: 2;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  color: transparent;
-  text-shadow: none;
-  cursor: pointer;
-}
-
-.today-hitarea:focus-visible {
-  outline: 2px dotted var(--win-text);
-  outline-offset: -4px;
-}
-
-@media (max-width: 1100px) {
-  .today-window {
-    display: none;
-  }
-}
-
 .window.main-shell > .window-body {
   flex: 1;
   min-height: 0;
@@ -311,24 +319,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.app-shell.plum {
-  background-color: #5c2a5c;
-}
-
-.app-shell.plum .window.main-shell .title-bar,
-.app-shell.plum .today-window .title-bar {
-  background: linear-gradient(90deg, #3a1745, #8d4e8d);
-}
-
-.app-shell.plum .window.main-shell .title-bar-text,
-.app-shell.plum .today-window .title-bar-text {
-  color: #fff;
-}
-
-.app-shell.plum .start-menu-banner {
-  background: linear-gradient(180deg, #3a1745, #8d4e8d);
 }
 
 @media (hover: hover) {
@@ -480,6 +470,7 @@ button.with-icon:disabled {
 
 .title-bar {
   gap: 4px;
+  background: var(--theme-titlebar);
 }
 
 .title-bar-icon {
@@ -1337,7 +1328,7 @@ button.with-icon:disabled {
   justify-content: center;
   width: 28px;
   padding: 8px 0;
-  background: linear-gradient(180deg, #000080, #1084d0);
+  background: var(--theme-titlebar);
   color: var(--win-bg);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -1522,6 +1513,11 @@ button.with-icon:disabled {
     width: calc(100vw - 16px);
   }
 
+  .taskbar-window {
+    flex: 1 1 0;
+    max-width: none;
+  }
+
   .start-menu {
     max-height: calc(100dvh - 44px);
     overflow-y: auto;
@@ -1632,7 +1628,6 @@ button.with-icon:disabled {
 
   body.recipe-print-open .taskbar,
   body.recipe-print-open .app-desktop-icon,
-  body.recipe-print-open .today-window,
   body.recipe-print-open .start-menu {
     display: none !important;
   }

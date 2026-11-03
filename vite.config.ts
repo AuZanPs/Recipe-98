@@ -1,19 +1,31 @@
 import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
-// GitHub Pages defaults to /Recipe-98/. Cloudflare Pages builds at the domain
-// root: set VITE_BASE_PATH=/ in that build environment (or .env.production).
+// The app is served from the domain root (recipe98.auzan.dev on Cloudflare).
+// A project-site deployment such as GitHub Pages sets VITE_BASE_PATH to its
+// sub-path (for example /Recipe-98/) in the build environment.
+const DEFAULT_BASE_PATH = '/';
+
+// index.html allows the Vite HMR websocket so `npm run dev` works. Production
+// builds should not ship that allowance.
+const stripDevCspSources = (): Plugin => ({
+  name: 'strip-dev-csp-sources',
+  apply: 'build',
+  transformIndexHtml: (html) =>
+    html.replace(/ ws:\/\/(localhost|127\.0\.0\.1):\*/g, ''),
+});
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const configuredBase = process.env.VITE_BASE_PATH ?? env.VITE_BASE_PATH;
-  const isCloudflarePages = Boolean(process.env.CF_PAGES ?? env.CF_PAGES);
-  const rawBase = configuredBase?.trim() || (isCloudflarePages ? '/' : '/Recipe-98/');
+  const rawBase = configuredBase?.trim() || DEFAULT_BASE_PATH;
   const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 
   return {
     base,
-    plugins: [react()],
+    plugins: [react(), stripDevCspSources()],
     server: {
       port: 3000,
     },

@@ -23,20 +23,22 @@ npm test
 npm run lint
 ```
 
-Node `24+` LTS. The dev server runs at `http://localhost:3000/Recipe-98/`.
+Node `24+` LTS. The dev server runs at `http://localhost:3000/`.
 
 ## Features
 
 - Search, categories, random recipes, favourites, and printable recipes
 - A Windows 98 desktop with a draggable recipe window, taskbar, clock, and Start menu
+- Welcome launcher on startup, then a program launch animation before the Recipe Finder opens
 - Minimize, maximize, restore, and close window modes
 - Display Properties with theme, recipe text size, desktop toggles, and 98.css tabs, fieldsets, tree view, table view, and slider
-- Draggable “Today’s Special” recipe widget
-- Plum theme via Display Properties or the Konami code
+- Plum theme across title bars, dialogs, active controls, selections, and window accents via Display Properties or the Konami code
 
 ## Deploy
 
-GitHub Pages builds with the default `/Recipe-98/` base. For Cloudflare Pages, set `VITE_BASE_PATH=/` or let the build auto-detect `CF_PAGES`; build command `npm run build`, output `dist`.
+The app builds for the domain root by default, which is what Cloudflare Pages needs (for example `recipe98.auzan.dev`): build command `npm run build`, output directory `dist`, Node `24`. The `_headers` and `_redirects` files in `public/` set the security headers and the single-page-app fallback.
+
+GitHub Pages serves the repo from a sub-path, so its workflow builds with `VITE_BASE_PATH=/Recipe-98/`.
 
 ## Credits
 
