@@ -24,6 +24,7 @@ npm run build      # typecheck + static build into dist/
 npm run preview    # serve the built site
 npm test           # Vitest, unit and component
 npm run test:e2e   # Playwright against the built site
+npm run docs:screens  # rewrite the screenshots in docs/
 npm run lint       # ESLint
 ```
 

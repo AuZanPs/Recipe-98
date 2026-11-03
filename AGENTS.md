@@ -35,7 +35,7 @@ and `AbortSignal.any`.
 | `src/routing.ts` | Base-path aware asset, home, and finder URLs |
 | `src/styles/global.css` | All styling: theme variables, 98.css overrides, responsive and touch rules |
 | `src/tests/` | Vitest + Testing Library (jsdom) |
-| `e2e/` | Playwright specs against the built site; `screenshots.spec.ts` refreshes `docs/` |
+| `e2e/` | Playwright specs against the built site; `screenshots.spec.ts` runs only through `npm run docs:screens` |
 
 ## Invariants
 
