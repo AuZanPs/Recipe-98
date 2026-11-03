@@ -9,6 +9,44 @@ const collectErrors = (page: import('@playwright/test').Page) => {
   return errors;
 };
 
+test('the skip link is the first stop and jumps into the desktop', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+
+  const skip = page.getByRole('link', { name: 'Skip to content' });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeInViewport();
+
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#main$/);
+});
+
+test('searching narrows the recipes', async ({ page }) => {
+  await page.goto('/app/');
+  await expect(page.getByRole('region', { name: 'Recipe Discovery 98' })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByRole('searchbox').fill('chicken');
+
+  await expect(page.getByRole('heading', { name: 'Search Results' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.locator('.meal-card').first()).toBeVisible();
+});
+
+test('the recipe window traps focus and closes on Escape', async ({ page }) => {
+  await page.goto('/app/');
+  await page.locator('.meal-card-hitarea').first().click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});
+
 test('welcome desktop prerenders and hydrates cleanly', async ({ page }) => {
   const errors = collectErrors(page);
 

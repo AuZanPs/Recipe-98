@@ -238,7 +238,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
 
   if (shuttingDown) {
     return (
-      <main className="app-shell shutting-down">
+      <main className="app-shell shutting-down" id="main">
         <p className="shutdown-message">It&rsquo;s now safe to turn off your computer.</p>
         <button
           type="button"
@@ -254,6 +254,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   return (
     <main
       className={`app-shell${launching ? ' launching' : ''}`}
+      id="main"
       ref={desktopRef}
       aria-busy={launching}
     >
@@ -319,7 +320,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
         )}
       >
         {initialAppOpen ? (
-          <Suspense fallback={<p className="starting-hint">Starting Recipe Finder...</p>}>
+          <Suspense fallback={<p className="starting-hint">Starting Recipe Finder…</p>}>
             <Home />
           </Suspense>
         ) : (
@@ -344,7 +345,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
       {launching && (
         <LaunchDialog
           title="Recipe Finder"
-          message="Starting Recipe Finder..."
+          message="Starting Recipe Finder…"
           icon={getAssetUrl('favicon.svg')}
           durationMs={LAUNCH_DURATION_MS}
         />

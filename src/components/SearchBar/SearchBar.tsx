@@ -19,10 +19,11 @@ export const SearchBar = ({ value, onChange, onSubmit }: Props) => {
         <label className="sr-only" htmlFor="recipe-search">Search recipes</label>
         <input
           id="recipe-search"
+          name="search"
           type="search"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Search recipes..."
+          placeholder="Search recipes…"
           autoComplete="off"
           spellCheck={false}
           maxLength={100}

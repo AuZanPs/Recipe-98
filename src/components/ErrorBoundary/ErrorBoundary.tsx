@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <div className="app-shell bsod" role="alert">
+      <main className="app-shell bsod" id="main" role="alert">
         <p className="bsod-banner">Recipe Discovery 98</p>
         <p>
           A fatal exception 0E has occurred in the recipe finder. The current
@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <button type="button" onClick={this.handleRetry}>Try Again</button>
           <button type="button" onClick={() => window.location.reload()}>Reload Page</button>
         </div>
-      </div>
+      </main>
     );
   }
 }

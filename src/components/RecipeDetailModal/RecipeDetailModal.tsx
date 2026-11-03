@@ -118,7 +118,7 @@ export const RecipeDetailModal = ({ meal, onClose }: Props) => {
               </button>
             </div>
           ) : detailQuery.isLoading ? (
-            <Loading message="Loading recipe details..." />
+            <Loading message="Loading recipe details…" />
           ) : (
             <p>Recipe not found.</p>
           )}
@@ -152,6 +152,8 @@ const RecipeDetails = ({
           src={mealImageUrl(meal.thumbnail, 'medium')}
           alt={meal.name}
           className="recipe-image"
+          width={200}
+          height={200}
           onError={handleRecipeImageError}
         />
         <div className="recipe-meta">

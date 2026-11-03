@@ -206,7 +206,7 @@ export const Home = () => {
 
   const renderSearch = () => {
     if (searchInput.trim() !== searchTerm || searchQuery.isLoading) {
-      return <Loading message={`Searching for "${searchInput.trim()}"...`} />;
+      return <Loading message={`Searching for "${searchInput.trim()}"…`} />;
     }
     if (searchQuery.isError) {
       return (
@@ -239,7 +239,7 @@ export const Home = () => {
 
   const renderCategory = () => {
     if (categoryQuery.isLoading) {
-      return <Loading message={`Loading ${category ?? ''} recipes...`} />;
+      return <Loading message={`Loading ${category ?? ''} recipes…`} />;
     }
     if (categoryQuery.isError) {
       return (
@@ -271,7 +271,7 @@ export const Home = () => {
   };
 
   const renderBrowse = () => {
-    if (categoriesQuery.isLoading) return <Loading message="Loading categories..." />;
+    if (categoriesQuery.isLoading) return <Loading message="Loading categories…" />;
     if (categoriesQuery.isError) {
       return (
         <ErrorDialog
@@ -348,7 +348,7 @@ export const Home = () => {
 
   const renderRandom = (heading: string, subtitle: string) => {
     if (randomQuery.isLoading || randomQuery.isFetching) {
-      return <Loading message="Rolling fresh recipes..." />;
+      return <Loading message="Rolling fresh recipes…" />;
     }
     if (randomQuery.isError) {
       return (

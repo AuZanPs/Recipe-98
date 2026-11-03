@@ -29,6 +29,8 @@ export const RecipeCard = memo(({ meal, onSelect }: Props) => {
           src={mealImageUrl(meal.strMealThumb, 'preview')}
           alt=""
           className="meal-thumb"
+          width={88}
+          height={88}
           loading="lazy"
           decoding="async"
           onError={handleRecipeImageError}
