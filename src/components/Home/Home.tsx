@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MealPartial } from '../types/recipe';
+import type { MealPartial } from '../../types/recipe';
 import {
   useByCategory,
   useCategories,
@@ -7,17 +7,17 @@ import {
   useFavorites,
   useRandomRecipes,
   useRecipes,
-} from '../hooks';
-import { AsciiStatus } from '../components/AsciiStatus/AsciiStatus';
+} from '../../hooks';
+import { AsciiStatus } from '../AsciiStatus/AsciiStatus';
 import { Bookmark, Grid3x2, Home as HomeIcon, Shuffle } from 'pixelarticons/react';
-import { SearchBar } from '../components/SearchBar/SearchBar';
-import { CategoryFilter } from '../components/CategoryFilter/CategoryFilter';
-import { RecipeDetailModal } from '../components/RecipeDetailModal/RecipeDetailModal';
-import { RecipeGrid } from '../components/RecipeGrid/RecipeGrid';
-import { Loading } from '../components/States/Loading';
-import { ErrorDialog } from '../components/States/ErrorDialog';
-import { EmptyState } from '../components/States/EmptyState';
-import { handleRecipeImageError } from '../utils/recipeImage';
+import { SearchBar } from '../SearchBar/SearchBar';
+import { CategoryFilter } from '../CategoryFilter/CategoryFilter';
+import { RecipeDetailModal } from '../RecipeDetailModal/RecipeDetailModal';
+import { RecipeGrid } from '../RecipeGrid/RecipeGrid';
+import { Loading } from '../States/Loading';
+import { ErrorDialog } from '../States/ErrorDialog';
+import { EmptyState } from '../States/EmptyState';
+import { handleRecipeImageError } from '../../utils/recipeImage';
 
 type View = 'home' | 'search' | 'category' | 'random' | 'browse' | 'favorites';
 
@@ -386,7 +386,7 @@ export const Home = () => {
     }
     return renderRandom(
       'Featured Recipes',
-      'A random assortment to get you started. Click any card for the full recipe.',
+      'A random assortment to get you started. Open any card for the full recipe.',
     );
   })();
 

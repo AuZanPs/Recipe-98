@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
-import { Desktop } from './pages/Desktop';
+import { Desktop } from './components/Desktop/Desktop';
 
 const queryClient = new QueryClient({
   defaultOptions: {

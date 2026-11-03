@@ -1,6 +1,9 @@
 node_modules
 dist
 dist-ssr
+.astro
+test-results
+playwright-report
 *.local
 
 # Editor directories and files

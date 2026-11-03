@@ -2,4 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://www.themealdb.com data: blob:; font-src 'self'; connect-src 'self' https://www.themealdb.com; object-src 'none'; frame-src 'none'; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: frame-ancestors 'none'
+
+The rest of the policy is generated per page by Astro, which hashes the inline
+scripts it emits. Keep only the directive a <meta> tag cannot express here:
+a second, stricter script-src in this header would block those hashed scripts.

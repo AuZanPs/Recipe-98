@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { background, swell } from 'asciify-engine/kit';
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BackgroundHandle } from 'asciify-engine/kit';
-import { CreditsDialog } from '../components/CreditsDialog/CreditsDialog';
-import { HelpDialog } from '../components/HelpDialog/HelpDialog';
-import { LaunchDialog } from '../components/LaunchDialog/LaunchDialog';
-import { SettingsDialog } from '../components/SettingsDialog/SettingsDialog';
-import { loadSettings, saveSettings } from '../components/SettingsDialog/settings';
-import type { DesktopSettings } from '../components/SettingsDialog/settings';
-import { StartMenu } from '../components/StartMenu/StartMenu';
-import { WindowFrame } from '../components/WindowFrame/WindowFrame';
-import { useDraggableWindow } from '../hooks/useDraggableWindow';
-import { useKonamiCode } from '../hooks/useKonamiCode';
-import { getAppUrl, getAssetUrl } from '../routing';
-import { prefersReducedMotion } from '../utils/motion';
-import { Home } from './Home';
+import { CreditsDialog } from '../CreditsDialog/CreditsDialog';
+import { HelpDialog } from '../HelpDialog/HelpDialog';
+import { LaunchDialog } from '../LaunchDialog/LaunchDialog';
+import { SettingsDialog } from '../SettingsDialog/SettingsDialog';
+import { defaultSettings, loadSettings, saveSettings } from '../SettingsDialog/settings';
+import type { DesktopSettings } from '../SettingsDialog/settings';
+import { StartMenu } from '../StartMenu/StartMenu';
+import { WindowFrame } from '../WindowFrame/WindowFrame';
+import { useDraggableWindow } from '../../hooks/useDraggableWindow';
+import { useKonamiCode } from '../../hooks/useKonamiCode';
+import { getAppUrl, getAssetUrl, getBaseUrl } from '../../routing';
+import { prefersReducedMotion } from '../../utils/motion';
 
 type WindowState = 'open' | 'minimized' | 'closed';
 
@@ -23,6 +21,12 @@ interface Props {
 
 /** How long the Recipe Finder "starts up" before its window appears. */
 const LAUNCH_DURATION_MS = 900;
+
+// The welcome desktop ships no recipe code: the finder arrives as its own
+// chunk, together with the ASCII engine only it uses.
+const Home = lazy(() =>
+  import('../Home/Home').then((module) => ({ default: module.Home })),
+);
 
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: 'numeric',
@@ -35,19 +39,21 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   const taskbarButtonRef = useRef<HTMLButtonElement>(null);
   const desktopIconRef = useRef<HTMLButtonElement>(null);
 
-  const [appOpen, setAppOpen] = useState(initialAppOpen);
   const [windowState, setWindowState] = useState<WindowState>('open');
   const [maximized, setMaximized] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [settings, setSettings] = useState<DesktopSettings>(loadSettings);
+  // Defaults render first so the server and the first client render agree;
+  // stored settings land in the effect below.
+  const [settings, setSettings] = useState<DesktopSettings>(defaultSettings);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const plum = settings.theme === 'plum';
   const [now, setNow] = useState(() => new Date());
-  const [launching, setLaunching] = useState(false);
+  const [launching, setLaunching] = useState(initialAppOpen);
+  const [shuttingDown, setShuttingDown] = useState(false);
   const [opening, setOpening] = useState(false);
-  const launchTimerRef = useRef<number | undefined>(undefined);
 
   const {
     windowRef,
@@ -69,15 +75,21 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   );
 
   useEffect(() => {
+    setSettings(loadSettings());
+    setSettingsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    saveSettings(settings);
+  }, [settings, settingsLoaded]);
+
+  useEffect(() => {
     document.documentElement.style.setProperty(
       '--recipe-text-size',
       `${settings.textSize}px`,
     );
   }, [settings.textSize]);
-
-  useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
 
   // The theme is a root attribute so portaled dialogs are themed too.
   useLayoutEffect(() => {
@@ -93,31 +105,39 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     const host = desktopRef.current;
     if (!host) return;
 
-    // The ASCII field is decorative: if it fails to start, the desktop should
-    // keep working without it.
+    // The ASCII field is decorative and heavy, so it is fetched after paint.
+    // If it fails to start, the desktop keeps working without it.
     let field: BackgroundHandle | null = null;
-    try {
-      field = background(host, {
-        preset: swell,
-        clear: windowRef.current ?? false,
-        clearPadding: 28,
-        clearSoftness: 64,
-        cursor: true,
-        opacity: 0.4,
-        speed: 0.55,
-        cellSize: 12,
-        mark: 'glyph',
-        charset: ' .:-=+*#',
-        ink: '--ascii-ink-landing',
-        lazy: false,
-        globalLook: false,
-        look: { font: '"IBM Plex Mono", monospace' },
-      });
-    } catch (error) {
-      console.warn('The ASCII desktop background could not start.', error);
-    }
+    let cancelled = false;
 
-    return () => field?.destroy();
+    void import('asciify-engine/kit')
+      .then(({ background, swell }) => {
+        if (cancelled) return;
+        field = background(host, {
+          preset: swell,
+          clear: windowRef.current ?? false,
+          clearPadding: 28,
+          clearSoftness: 64,
+          cursor: true,
+          opacity: 0.4,
+          speed: 0.55,
+          cellSize: 12,
+          mark: 'glyph',
+          charset: ' .:-=+*#',
+          ink: '--ascii-ink-landing',
+          lazy: false,
+          globalLook: false,
+          look: { font: '"IBM Plex Mono", monospace' },
+        });
+      })
+      .catch((error: unknown) => {
+        console.warn('The ASCII desktop background could not start.', error);
+      });
+
+    return () => {
+      cancelled = true;
+      field?.destroy();
+    };
     // Restarted on theme change so the field picks up the new desktop colour.
   }, [windowRef, settings.theme]);
 
@@ -126,9 +146,17 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     return () => window.clearInterval(timer);
   }, []);
 
-  const dismissStartMenu = useCallback(() => setStartOpen(false), []);
+  // The startup dialog belongs to the /app route: arriving there is the launch.
+  useEffect(() => {
+    if (!initialAppOpen) return;
+    const timer = window.setTimeout(
+      () => setLaunching(false),
+      prefersReducedMotion() ? 0 : LAUNCH_DURATION_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [initialAppOpen]);
 
-  useEffect(() => () => window.clearTimeout(launchTimerRef.current), []);
+  const dismissStartMenu = useCallback(() => setStartOpen(false), []);
 
   const focusDesktop = () => {
     const target = settings.showDesktopIcon
@@ -137,45 +165,9 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     target?.focus();
   };
 
-  const showApp = useCallback(() => {
-    setAppOpen(true);
-    setWindowState('open');
-    setMaximized(false);
-    setStartOpen(false);
-    setOpening(true);
-    resetPosition();
-    window.history.replaceState(null, '', getAppUrl());
-    window.requestAnimationFrame(() => windowRef.current?.focus());
-  }, [resetPosition, windowRef]);
-
-  // The welcome window is a launcher: starting the program closes it, then the
-  // program's own window opens after a short startup animation. Re-opening an
-  // already-running program just brings it back to the front.
-  const openApp = useCallback(() => {
-    if (launching) {
-      setStartOpen(false);
-      return;
-    }
-
-    if (appOpen && windowState !== 'closed') {
-      showApp();
-      return;
-    }
-
-    setStartOpen(false);
-    setWindowState('closed');
-
-    if (prefersReducedMotion()) {
-      showApp();
-      return;
-    }
-
-    setLaunching(true);
-    launchTimerRef.current = window.setTimeout(() => {
-      setLaunching(false);
-      showApp();
-    }, LAUNCH_DURATION_MS);
-  }, [appOpen, launching, showApp, windowState]);
+  const navigate = (url: string) => {
+    window.location.assign(url);
+  };
 
   const restoreWindow = () => {
     setWindowState('open');
@@ -191,25 +183,28 @@ export const Desktop = ({ initialAppOpen }: Props) => {
   };
 
   const closeWindow = () => {
+    setStartOpen(false);
+    if (initialAppOpen) {
+      navigate(getBaseUrl());
+      return;
+    }
     setWindowState('closed');
     setMaximized(false);
-    setStartOpen(false);
     window.requestAnimationFrame(focusDesktop);
   };
 
   const toggleMaximize = () => {
-    if (!appOpen) return;
     setMaximized((current) => !current);
     resetPosition();
     window.requestAnimationFrame(() => windowRef.current?.focus());
   };
 
   const openDesktopIcon = () => {
-    if (appOpen && windowState !== 'closed') {
+    if (windowState !== 'open') {
       restoreWindow();
       return;
     }
-    openApp();
+    windowRef.current?.focus();
   };
 
   const openHelpFromMenu = () => {
@@ -228,13 +223,33 @@ export const Desktop = ({ initialAppOpen }: Props) => {
     setSettingsOpen(true);
   };
 
+  const shutDown = () => {
+    setStartOpen(false);
+    setShuttingDown(true);
+  };
+
   const windowClassName = [
     'main-shell',
-    appOpen ? 'app-mode' : 'welcome-mode',
+    initialAppOpen ? 'app-mode' : 'welcome-mode',
     maximized ? 'maximized' : '',
     dragging ? 'dragging' : '',
     opening ? 'opening' : '',
   ].filter(Boolean).join(' ');
+
+  if (shuttingDown) {
+    return (
+      <main className="app-shell shutting-down">
+        <p className="shutdown-message">It&rsquo;s now safe to turn off your computer.</p>
+        <button
+          type="button"
+          className="shutdown-restart"
+          onClick={() => window.location.reload()}
+        >
+          Restart
+        </button>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -269,7 +284,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
           },
         }}
         icon={getAssetUrl('favicon.svg')}
-        hidden={windowState !== 'open'}
+        hidden={windowState !== 'open' || launching}
         onAnimationEnd={(event) => {
           if (event.target === event.currentTarget) setOpening(false);
         }}
@@ -286,7 +301,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
               title="Minimize to taskbar"
               onClick={minimizeWindow}
             />
-            {appOpen && (
+            {initialAppOpen && (
               <button
                 type="button"
                 aria-label={maximized ? 'Restore' : 'Maximize'}
@@ -297,14 +312,16 @@ export const Desktop = ({ initialAppOpen }: Props) => {
             <button
               type="button"
               aria-label="Close"
-              title="Close to desktop"
+              title={initialAppOpen ? 'Close to desktop' : 'Close window'}
               onClick={closeWindow}
             />
           </>
         )}
       >
-        {appOpen ? (
-          <Home />
+        {initialAppOpen ? (
+          <Suspense fallback={<p className="starting-hint">Starting Recipe Finder...</p>}>
+            <Home />
+          </Suspense>
         ) : (
           <div className="welcome-content">
             <img
@@ -314,9 +331,12 @@ export const Desktop = ({ initialAppOpen }: Props) => {
               width={64}
               height={64}
             />
-            <button type="button" className="welcome-launch" onClick={openApp}>
+            <a className="win-button welcome-launch" href={getAppUrl()}>
               Open Recipe Finder
-            </button>
+            </a>
+            <p className="welcome-hint">
+              Press <kbd>/</kbd> to search, <kbd>R</kbd> for a random recipe.
+            </p>
           </div>
         )}
       </WindowFrame>
@@ -337,11 +357,16 @@ export const Desktop = ({ initialAppOpen }: Props) => {
             plum={plum}
             canCloseWindow={windowState !== 'closed'}
             onDismiss={dismissStartMenu}
-            onOpenApp={openApp}
+            onOpenApp={() => {
+              setStartOpen(false);
+              if (initialAppOpen) restoreWindow();
+              else navigate(getAppUrl());
+            }}
             onOpenSettings={openSettings}
             onSetTheme={setTheme}
             onOpenHelp={openHelpFromMenu}
             onCloseWindow={closeWindow}
+            onShutDown={shutDown}
           />
         )}
 
@@ -359,17 +384,18 @@ export const Desktop = ({ initialAppOpen }: Props) => {
           Start
         </button>
 
-        {windowState !== 'closed' && (
+        {initialAppOpen && (
           <button
             ref={taskbarButtonRef}
             type="button"
             className={`taskbar-window${windowState === 'open' ? ' active' : ''}`}
             aria-pressed={windowState === 'open'}
+            aria-label="Recipe Discovery 98"
             title={windowState === 'open' ? 'Minimize Recipe Finder' : 'Restore Recipe Finder'}
             onClick={windowState === 'open' ? minimizeWindow : restoreWindow}
           >
             <img src={getAssetUrl('favicon.svg')} alt="" width={16} height={16} />
-            Recipe Discovery 98
+            <span className="taskbar-window-label">Recipe Discovery 98</span>
           </button>
         )}
 
@@ -387,6 +413,7 @@ export const Desktop = ({ initialAppOpen }: Props) => {
             className="taskbar-clock"
             dateTime={now.toISOString()}
             title={now.toLocaleDateString()}
+            suppressHydrationWarning
           >
             {timeFormatter.format(now)}
           </time>
