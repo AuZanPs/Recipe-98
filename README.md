@@ -12,6 +12,11 @@ IBM Plex, TanStack Query, Zod, and TheMealDB.
 
 ![Display Properties](docs/settings.png)
 
+The ASCII desktop field only paints on a hardware-accelerated browser — the
+engine opts itself out on software renderers so weak devices keep their frame
+rate. The screenshots are headless Chromium captures, which is why the desktop
+behind them is flat teal.
+
 ## Run
 
 ```bash
